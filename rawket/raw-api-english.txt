@@ -1,0 +1,84 @@
+Rawket---A socket-like API for LwIP based on Raw API.
+Author: WuMu(540535649@qq.com)
+
+TCP Client APIs (#include "raw_client_api.h")
+1) client_init_manager(); 
+In your main function, when lwip initialization finished, call this to start the client manager. This function can only be called once.
+
+2) int client_connect_to_server(ip, port)
+try to connect to a server, this function just allocate a client socket for the application, a SYN will be sent to server.
+
+2) CLI_STATUS client_status_check(int sock)
+check whether the client connection is OK, the return value "CLI_CONNECTED" stands for success, and "CLI_ERR" stands for trying connecting or re-connecting.
+
+3） client_close(int sock)
+close the client socket.
+
+4）int client_check_snd_buf(int sock)
+check the send buffer length of the connection, application can only send data less than length.
+
+5）int client_check_recv_buf(int sock)
+check the receiver buffer the connection, the non-zero value stands that there are data arrived, application can read data now.
+
+6）int client_snd_data(int sock, char *buf, int len)
+send data on the connection, len should be less than the connection remaining send buffer, or else this API will fail. This API just write data to connection buffer.
+
+7）int client_recv_data(int sock, char *buf, int len)
+receive data on the connection, the return value stands for the data length received.
+
+TCP server APIs(#include "raw_server_api.h")
+0) server_init_manager();
+In your main function, when lwip initialization finished, call this to start the server manager. This function can only be called once.
+
+1) int server_open(port)
+open a tcp server, port will be used for listening. MAX_CLIENT_PER_SERVER(no more than 16) is the maximum clients a server can support.
+
+2) int server_check_client(int srv_sock)
+check the clients that are connected to server. the return value is a 32 bit map, the low 16-bits stands for the connection status of 16 clients.
+For example, if the return value is 0x0003, then client 1 and client 2 is connected, the socket number for client 1 is (1<<16+srv_sock), while socket number for client 2 is (2<<16+srv_sock).
+
+3)void server_close(int srv_sock);
+close server, all the client connections will be closed.
+
+4）ip_addr server_get_client_ip(int cli_sock)
+get the client IP, the cli_sock is a client socket calculated as 2)
+
+5）ip_addr server_get_client_port(int cli_sock)
+get the client port, the cli_sock is a client socket calculated as 2)
+
+6）server_close_client(int cli_sock)
+close the connection to a client, the cli_sock is a client socket calculated as 2)
+
+7）int server_check_client_snd_buf(int cli_sock)
+check the send buffer length of a client connection, application can only send data less than length.
+
+8）int server_check_client_recv_buf(int cli_sock)
+check the receiver buffer a client connection, the non-zero value stands that there are data arrived, application can read data now.
+
+9）int server_snd_client_data(int cli_sock, char *buf, int len)
+send data on a client connection, len should be less than the connection remaining send buffer, or else this API will fail. This API just write data to connection buffer.
+
+10）int server_recv_client_data(int cli_sock, char *buf, int len)
+receive data on a client connection, the return value stands for the data length received.
+
+example demos:
+we have two examples in rawket_example.c which implemented as an echo client and an echo server.
+use them as follows to see how Rawket works.
+
+#include "raw_client_api.h"
+#include "raw_server_api.h"
+void main(void)
+{
+    init_lwip();             //Lwip initialization, netif_add
+  
+    server_init_manager();   //@init the client manager once
+    client_init_manager();   //@init the client manager once
+    while(1)
+    {
+        packet_query_and_input();    //read packet from netif and call lwip core to process it
+	    sys_check_timeouts();        //lwip timeouts
+	    
+		raw_socket_client_demo();    //@ example for Rawket client 
+        raw_socket_server_demo();    //@ example for Rawket server
+    }
+}

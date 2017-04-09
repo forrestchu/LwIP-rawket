@@ -1,0 +1,70 @@
+Rawket---基于LwIP Raw API实现的类socket网络编程接口
+作者：老衲五木（540535649@qq.com）
+
+客户端操作函数：#include "raw_client_api.h"
+0) client_init_manager(); 
+系统启动后，调用一次该函数来初始化客户端管理后台
+1) int client_connect_to_server(ip, port)
+说明：客户端用该函数用来发起向服务器的连接，注意该函数只是分配一个socket号并向服务器发送
+连接请求，函数返回后，并不代表连接成功。函数执行成功，返回分配成功的socket号。
+2) CLI_STATUS client_status_check(int sock)
+说明：该函数用来检查客户端是否于服务器成功建立连接；如果返回CLI_CONNECTED表示连接建立成功，CLI_ERR表示连接未成功或正在重试连接。
+3） client_close(int sock)
+说明：客户端关闭到服务器的连接。当连接关闭后，对sock的任何操作都将返回错误。
+
+4）int client_check_snd_buf(int sock)
+说明：获取客户端sock的空余发送缓冲长度，在后续数据发送时，发送长度应该小于该值，否则数据发送将失败。
+5）int client_check_recv_buf(int sock)
+说明：获取客户端sock的接收缓冲长度，这个表示客户端当前接收到的但是还未被应用程序读取的数据。
+6）int client_snd_data(int sock, char *buf, int len)
+说明：客户端数据发送函数，将buf地址处的len个字节发送到服务器。如果len的长度大于socket的空余发送缓冲长度，该函数将返回失败，否则发送成功，数据被写入内部发送缓冲。
+7）int client_recv_data(int sock, char *buf, int len)
+说明：客户端数据接收函数，从socket上接收数据放入用户缓冲buf中，buf的长度为len。如果客户端没接收到任何数据，这个函数返回0，如果收到数据，则返回收到数据的大小。
+
+服务器端操作函数：#include "raw_server_api.h"
+0) server_init_manager(); 系统启动后，调用一次该函数来初始化服务器管理后台
+1) int server_open(port)
+说明：服务器开启侦听,若侦听成功，函数返回服务器socket。注意每个服务器支持的最多客户端数在代码中已通过宏MAX_CLIENT_PER_SERVER（该值最大为16）写定，不能动态更改。
+2) int server_check_client(int srv_sock)
+说明：检测服务器sock上的客户端连接情况，该函数返回值为一个32位的位图（仅低16位有效），若第i位为1，则表示一个客户端与服务器建立了连接，且该连接的socket号为(i<<16+srv_sock)。比如该函数返回值为0x0003，表示socket (1<<16+srv_sock) 和socket (2<<16+srv_sock) 连接已经建立。
+3)void server_close(int srv_sock);
+关闭服务器，这将导致该服务器上的所有客户端连接也被关闭。
+
+4）ip_addr server_get_client_ip(int cli_sock)
+说明：获得cli_sock上的客户端的IP地址
+5）ip_addr server_get_client_port(int cli_sock)
+说明：获得cli_sock上的客户端的端口号
+6）server_close_client(int cli_sock)
+说明：服务器关闭一个客户端的连接
+
+7）int server_check_client_snd_buf(int cli_sock)
+说明：服务器获取一个客户端连接sock的空余发送缓冲长度，在后续数据发送时，发送长度应该小于该值，否则数据发送将失败。
+8）int server_check_client_recv_buf(int cli_sock)
+说明：服务器获取一个客户端连接sock的接收缓冲长度，这个表示服务器在当前连接上接收到的但是还未被应用程序读取的数据。
+9）int server_snd_client_data(int cli_sock, char *buf, int len)
+说明：服务器端数据发送函数，将buf地址处的len个字节发送到客户端。如果len的长度大于socket的空余发送缓冲长度，该函数将返回失败，否则发送成功，数据被写入内部发送缓冲。
+10）int server_recv_client_data(int cli_sock, char *buf, int len)
+说明：服务器端数据接收函数，从socket上接收数据放入用户缓冲buf中，buf的长度为len。如果服务器在连接上没接收到任何数据，这个函数返回0，如果收到数据，则返回收到数据的大小。
+
+使用例子
+在rawket_example.c文件里面，我们基于Rawket API分别实现了一个回显客户端和回显服务器。
+把这个文件和API文件一起加入到你的工程中，就可以直接把这两个基于Rawket API的网络应用跑起来了。
+下面是整个代码的初始化以及两个应用程序调用方法：
+
+#include "raw_client_api.h"
+#include "raw_server_api.h"
+void main(void)
+{
+    init_lwip();             //LwIP内核初始化，包括添加网卡结构等
+  
+    server_init_manager();   //@初始化Rawket服务器管理数据结构
+    client_init_manager();   //@初始化Rawket客户端管理数据结构
+    while(1)
+    {
+        packet_query_and_input();    //查询读取网卡数据包并交给内核处理
+	    sys_check_timeouts();        //处理内核超时事件
+	    
+		raw_socket_client_demo();    //@ 基于Rawket的回显客户端
+        raw_socket_server_demo();    //@ 基于Rawket的回显服务器
+    }
+}
