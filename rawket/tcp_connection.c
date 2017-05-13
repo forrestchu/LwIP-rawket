@@ -100,7 +100,15 @@ void tcp_conn_err(void *arg, err_t err)
     {
 	    
         args->pcb = NULL;
-        tcp_conn_client_reconnect(args);
+		//don't reconnect when there is RST error from server, to avoid multiple reconnecting clients.
+		if(err != ERR_RST)
+		{
+            tcp_conn_client_reconnect(args);
+		}
+		else
+		{
+			args->conn_status = CONN_CLIENT_CLOSED;
+		}
     }
     else
     {
