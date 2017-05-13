@@ -2,7 +2,7 @@
 Raw API for LwIP is too difficult? No, you can use the "rawket" APIs to build your network applications, the rawket gives you socket-like APIs based on LwIP raw API.
 
 Rawket: 
-A socket-like API for LwIP based on raw api.
+A socket-like API for LwIP based on Raw API.
 
 Rawket supports:
 1) TCP client APIs, integrated with auto reconnecting and error handling, hardware-independent keep-alive.
